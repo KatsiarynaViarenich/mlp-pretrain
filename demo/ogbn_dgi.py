@@ -17,7 +17,7 @@ from torch_geometric.typing import OptPairTensor
 from torch_geometric.nn.models import DeepGraphInfomax
 from tqdm import tqdm
 import argparse
-
+import random
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--init_method", type=str, default="mlp", choices=["random", "mlp"])
@@ -227,20 +227,25 @@ optimizer_model_mlpinit = torch.optim.Adam(model_mlpinit.parameters(), lr=0.001,
 
 
 def train_mlpinit():
-    def corruption(x):
-        print(x)
+    def index_corruption(x):
+        mask = torch.ones(x.size()[0], 128)
+        mask[:][torch.randperm(128)[:32]] = 0
+        mask = mask.to(device)
+        x = torch.where(mask.bool(), x, torch.zeros_like(x))
         return x
+
+    def dropout_corruption(x):
+        pass
 
     def summary(z, *args, **kwargs):
         return torch.sigmoid(z.mean(dim=0))
 
     total_loss = 0
 
-    unsupervised_model = DeepGraphInfomax(hidden_channels=40, encoder=model_mlpinit, summary=summary, corruption=corruption)
+    unsupervised_model = DeepGraphInfomax(hidden_channels=40, encoder=model_mlpinit, summary=summary, corruption=index_corruption)
     unsupervised_model.train()
     for x, _ in tqdm(train_mlpinit_loader):
         x = x.to(device)
-        _ = y.to(device)
 
         optimizer_model_mlpinit.zero_grad()
         pos_z, neg_z, summary = unsupervised_model(x)
@@ -252,7 +257,7 @@ def train_mlpinit():
 
     loss = total_loss / len(train_mlpinit_loader)
     unsupervised_model.eval()
-    return loss
+    return loss, 0
 
 
 @torch.no_grad()
