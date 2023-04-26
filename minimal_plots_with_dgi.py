@@ -229,7 +229,9 @@ def train_mlpinit():
     def index_corruption(x):
         mask = torch.ones(x.size()[0], 128)
         mask[:][torch.randperm(128)[:32]] = 0
-        mask = mask.to(device)
+        mask = mask.bool().to(device)
+        zeroes = torch.zeros_like(x).to()
+
         x = torch.where(mask.bool(), x, torch.zeros_like(x))
         return x
 
@@ -243,6 +245,7 @@ def train_mlpinit():
 
     unsupervised_model = DeepGraphInfomax(hidden_channels=40, encoder=model_mlpinit, summary=summary,
                                           corruption=index_corruption)
+    unsupervised_model.to(device)
     unsupervised_model.train()
     for x, _ in tqdm(train_mlpinit_loader):
         x = x.to(device)
