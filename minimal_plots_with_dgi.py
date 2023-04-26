@@ -425,7 +425,7 @@ model.load_state_dict(torch.load(f'./model_mlpinit.pt'))
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0)
 
 best_val_acc = final_test_acc = 0
-for epoch in range(1, 6):
+for epoch in range(1, 20):
     loss, acc = train(epoch)
     train_acc, val_acc, test_acc = test()
     print(f'Epoch {epoch:02d}, Train: {train_acc:.4f}, Val: {val_acc:.4f}, 'f'Test: {test_acc:.4f}')
