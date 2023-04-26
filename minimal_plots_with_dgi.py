@@ -18,13 +18,52 @@ import torch.utils.data as data_utils
 
 from torch_geometric.nn.models import DeepGraphInfomax
 import wandb
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--dataset", type=str, default="ogbn-arxiv", choices=["ogbn-products", "ogbn-arxiv", "Reddit", "Flickr", "Yelp", "AmazonProducts", "Reddit2"])
+args = parser.parse_args()
+
+
+if args.dataset == "Flickr":
+    args.num_classes = 7
+    args.num_feats = 500
+
+elif args.dataset == "Reddit":
+    args.num_classes = 41
+    args.num_feats = 602
+
+elif args.dataset == "Reddit2":
+    args.num_classes = 41
+    args.num_feats = 602
+
+elif args.dataset == "ogbn-products":
+    args.multi_label = False
+    args.num_classes = 47
+    args.num_feats = 100
+
+elif args.dataset == "AmazonProducts":
+    args.multi_label = True
+    args.num_classes = 107
+    args.num_feats = 200
+
+elif args.dataset == "Yelp":
+    args.multi_label = True
+    args.num_classes = 100
+    args.num_feats = 300
+
+elif args.dataset == "ogbn-arxiv":
+    args.num_feats = 128
+    args.num_classes = 40
+    args.N_nodes = 169343
+
 
 wandb.init(
     project="pretrain-mlpinit",
     dir="./wandb",
     config={
         "init_method": "mlp",
-        "dataset_name": "ogbn-arxiv",
+        "dataset_name": args.dataset,
         "batch_size": 1024,
         "num_layers": 4,
         "hidden_channels": 512
@@ -227,10 +266,9 @@ optimizer_model_mlpinit = torch.optim.Adam(model_mlpinit.parameters(), lr=0.001,
 
 def train_mlpinit():
     def index_corruption(x):
-        mask = torch.ones(x.size()[0], 128)
-        mask[:][torch.randperm(128)[:32]] = 0
+        mask = torch.ones(x.size()[0], args.num_feats)
+        mask[:][torch.randperm(args.num_feats)[:args.num_feats//4]] = 0
         mask = mask.bool().to(device)
-        zeroes = torch.zeros_like(x).to()
 
         x = torch.where(mask.bool(), x, torch.zeros_like(x))
         return x
@@ -243,7 +281,7 @@ def train_mlpinit():
 
     total_loss = 0
 
-    unsupervised_model = DeepGraphInfomax(hidden_channels=40, encoder=model_mlpinit, summary=summary,
+    unsupervised_model = DeepGraphInfomax(hidden_channels=args.num_classes, encoder=model_mlpinit, summary=summary,
                                           corruption=index_corruption)
     unsupervised_model.to(device)
     unsupervised_model.train()
@@ -404,7 +442,7 @@ for epoch in range(1, 20):
     loss, acc = train(epoch)
     train_acc, val_acc, test_acc = test()
     print(f'Epoch {epoch:02d}, Train: {train_acc:.4f}, Val: {val_acc:.4f}, 'f'Test: {test_acc:.4f}')
-    wandb.log({"loss": loss, "acc": test_acc})
+    wandb.log({"loss_random": loss, "acc_random": test_acc})
     random_losses.append(loss)
     random_test_accs.append(test_acc)
 
@@ -429,7 +467,7 @@ for epoch in range(1, 20):
     loss, acc = train(epoch)
     train_acc, val_acc, test_acc = test()
     print(f'Epoch {epoch:02d}, Train: {train_acc:.4f}, Val: {val_acc:.4f}, 'f'Test: {test_acc:.4f}')
-    wandb.log({"loss": loss, "acc": test_acc})
+    wandb.log({"loss_mlpinit": loss, "acc_mlpinit": test_acc})
     mlpinit_losses.append(loss)
     mlpinit_test_accs.append(test_acc)
 
