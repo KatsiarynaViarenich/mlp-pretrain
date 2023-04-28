@@ -62,13 +62,15 @@ wandb.init(
     project="pretrain-mlpinit",
     dir="./wandb",
     config={
-        "init_method": "mlp",
         "dataset_name": args.dataset,
-        "batch_size": 1024,
+        "batch_size": 4096,
         "num_layers": 4,
-        "hidden_channels": 512
+        "hidden_channels": 512,
+        "percent_corrupted": 0.25,
+        "custom_step": 0
     }
 )
+
 dataset_dir = "./data"
 num_workers = 4
 
@@ -266,8 +268,9 @@ optimizer_model_mlpinit = torch.optim.Adam(model_mlpinit.parameters(), lr=0.001,
 
 def train_mlpinit():
     def index_corruption(x):
-        mask = torch.ones(x.size()[0], args.num_feats)
-        mask[:][torch.randperm(args.num_feats)[:args.num_feats//4]] = 0
+        num_nodes = x.size()[0]
+        mask = torch.ones(num_nodes, args.num_feats)
+        mask[:][torch.randperm(num_nodes)[:args.num_feats*wandb.config.percent_corrupted]] = 0
         mask = mask.bool().to(device)
 
         x = torch.where(mask.bool(), x, torch.zeros_like(x))
@@ -297,6 +300,7 @@ def train_mlpinit():
         total_loss += float(loss)
 
     loss = total_loss / len(train_mlpinit_loader)
+    wandb.log({"loss_dgi": loss})
     unsupervised_model.eval()
     return loss, 0
 
@@ -463,13 +467,21 @@ model.load_state_dict(torch.load(f'./model_mlpinit.pt'))
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0)
 
 best_val_acc = final_test_acc = 0
-for epoch in range(1, 20):
+for epoch in range(0, 20):
     loss, acc = train(epoch)
     train_acc, val_acc, test_acc = test()
     print(f'Epoch {epoch:02d}, Train: {train_acc:.4f}, Val: {val_acc:.4f}, 'f'Test: {test_acc:.4f}')
-    wandb.log({"loss_mlpinit": loss, "acc_mlpinit": test_acc})
     mlpinit_losses.append(loss)
     mlpinit_test_accs.append(test_acc)
+
+    wandb.define_metric("loss_mlpinit", step_metric='custom_step')
+    wandb.define_metric("acc_mlpinit", step_metric='custom_step')
+    log_dict = {
+        "custom_step": epoch,
+        "loss_mlpinit": loss,
+        "acc_mlpinit": test_acc
+    }
+    wandb.log(log_dict)
 
 
 def find_best_speedup(random_accs, mlpinit_accs):
