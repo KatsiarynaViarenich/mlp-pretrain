@@ -442,11 +442,18 @@ model.reset_parameters()
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001, weight_decay=0.0)
 
 best_val_acc = final_test_acc = 0
-for epoch in range(1, 20):
+for epoch in range(0, 20):
     loss, acc = train(epoch)
     train_acc, val_acc, test_acc = test()
     print(f'Epoch {epoch:02d}, Train: {train_acc:.4f}, Val: {val_acc:.4f}, 'f'Test: {test_acc:.4f}')
-    wandb.log({"loss_random": loss, "acc_random": test_acc})
+    wandb.define_metric("loss_random", step_metric='custom_step')
+    wandb.define_metric("acc_random", step_metric='custom_step')
+    log_dict = {
+        "custom_step": epoch,
+        "loss_random": loss,
+        "acc_random": test_acc
+    }
+    wandb.log(log_dict)
     random_losses.append(loss)
     random_test_accs.append(test_acc)
 
