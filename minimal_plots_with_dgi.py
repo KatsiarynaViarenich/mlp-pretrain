@@ -270,7 +270,7 @@ def train_mlpinit():
     def index_corruption(x):
         num_nodes = x.size()[0]
         mask = torch.ones(num_nodes, args.num_feats)
-        mask[:][torch.randperm(num_nodes)[:args.num_feats*wandb.config.percent_corrupted]] = 0
+        mask[:][torch.randperm(num_nodes)[:int(args.num_feats*wandb.config.percent_corrupted)]] = 0
         mask = mask.bool().to(device)
 
         x = torch.where(mask.bool(), x, torch.zeros_like(x))
