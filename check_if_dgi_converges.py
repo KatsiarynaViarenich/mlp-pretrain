@@ -202,7 +202,7 @@ class MLP(torch.nn.Module):
 
 
 model_mlpinit = MLP(
-    in_channels=args.num_features,
+    in_channels=args.num_feats,
     hidden_channels=wandb.config.hidden_channels,
     out_channels=args.num_classes,
     num_layers=wandb.config.num_layers,
