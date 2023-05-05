@@ -63,7 +63,7 @@ wandb.init(
     dir="./wandb",
     config={
         "dataset_name": args.dataset,
-        "batch_size": 4096,
+        "batch_size": 1024,
         "num_layers": 4,
         "hidden_channels": 512,
         "percent_corrupted": 0.25,
@@ -266,43 +266,50 @@ model_mlpinit = model_mlpinit.to(device)
 optimizer_model_mlpinit = torch.optim.Adam(model_mlpinit.parameters(), lr=0.001, weight_decay=0.0)
 
 
+
+def index_corruption(x):
+    num_nodes = x.size()[0]
+    mask = torch.ones(num_nodes, args.num_feats)
+    mask[:][torch.randperm(num_nodes)[:int(args.num_feats * wandb.config.percent_corrupted)]] = 0
+    mask = mask.bool().to(device)
+
+    x = torch.where(mask.bool(), x, torch.zeros_like(x))
+    return x
+
+
+def dropout_corruption(x, p=0.9):
+    mask = torch.empty_like(x).bernoulli_(p)
+    x = torch.where(mask.bool(), x, torch.zeros_like(x))
+    return x
+
+
+def summary(z, *args, **kwargs):
+    return torch.sigmoid(z.mean(dim=0))
+
+
+unsupervised_model = DeepGraphInfomax(hidden_channels=args.num_classes, encoder=model_mlpinit, summary=summary,
+                                          corruption=dropout_corruption)
+unsupervised_model.to(device)
+
 def train_mlpinit():
-    def index_corruption(x):
-        num_nodes = x.size()[0]
-        mask = torch.ones(num_nodes, args.num_feats)
-        mask[:][torch.randperm(num_nodes)[:int(args.num_feats*wandb.config.percent_corrupted)]] = 0
-        mask = mask.bool().to(device)
-
-        x = torch.where(mask.bool(), x, torch.zeros_like(x))
-        return x
-
-    def dropout_corruption(x):
-        pass
-
-    def summary(z, *args, **kwargs):
-        return torch.sigmoid(z.mean(dim=0))
-
     total_loss = 0
-
-    unsupervised_model = DeepGraphInfomax(hidden_channels=args.num_classes, encoder=model_mlpinit, summary=summary,
-                                          corruption=index_corruption)
-    unsupervised_model.to(device)
     unsupervised_model.train()
     for x, _ in tqdm(train_mlpinit_loader):
         x = x.to(device)
 
         optimizer_model_mlpinit.zero_grad()
-        pos_z, neg_z, summary = unsupervised_model(x)
-        loss = unsupervised_model.loss(pos_z, neg_z, summary)
+        pos_z, neg_z, summary_value = unsupervised_model(x)
+        loss = unsupervised_model.loss(pos_z, neg_z, summary_value)
         loss.backward()
         optimizer_model_mlpinit.step()
 
         total_loss += float(loss)
 
-    loss = total_loss / len(train_mlpinit_loader)
-    wandb.log({"loss_dgi": loss})
+    loss_percent = total_loss / len(train_mlpinit_loader)
+    wandb.log({"loss_dgi": loss_percent})
     unsupervised_model.eval()
-    return loss, 0
+    return loss_percent, 0
+
 
 
 @torch.no_grad()
