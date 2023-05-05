@@ -63,7 +63,6 @@ elif args.dataset == "ogbn-arxiv":
 
 num_feats = args.num_feats
 num_classes = args.num_classes
-N_nodes = args.N_nodes
 
 wandb.init(
     project="pretrain-mlpinit",
