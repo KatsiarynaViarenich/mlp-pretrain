@@ -222,7 +222,7 @@ def train_mlpinit():
         x = torch.where(mask.bool(), x, torch.zeros_like(x))
         return x
 
-    def dropout_corruption(x, p=0.95):
+    def dropout_corruption(x, p=0.9):
         mask = torch.empty_like(x).bernoulli_(p)
         x = torch.where(mask.bool(), x, torch.zeros_like(x))
         return x
