@@ -243,7 +243,7 @@ def train_mlpinit():
 
         optimizer_model_mlpinit.zero_grad()
         pos_z, neg_z, summary_value = unsupervised_model(x)
-        loss = unsupervised_model.loss(pos_z, neg_z, summary)
+        loss = unsupervised_model.loss(pos_z, neg_z, summary_value)
         loss.backward()
         optimizer_model_mlpinit.step()
 
