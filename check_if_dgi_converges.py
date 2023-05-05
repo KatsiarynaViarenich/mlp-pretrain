@@ -69,7 +69,7 @@ wandb.init(
     dir="./wandb",
     config={
         "dataset_name": "ogbn-arxiv",
-        "batch_size": 4096,
+        "batch_size": 1024,
         "num_layers": 4,
         "hidden_channels": 1024,
         "percent_corrupted": 0.25,
