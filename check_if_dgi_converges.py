@@ -212,35 +212,37 @@ model_mlpinit = model_mlpinit.to(device)
 optimizer_model_mlpinit = torch.optim.Adam(model_mlpinit.parameters(), lr=0.001, weight_decay=0.0)
 
 
-def train_mlpinit():
-    def index_corruption(x):
-        num_nodes = x.size()[0]
-        mask = torch.ones(num_nodes, num_feats)
-        mask[:][torch.randperm(num_nodes)[:int(num_feats * wandb.config.percent_corrupted)]] = 0
-        mask = mask.bool().to(device)
+def index_corruption(x):
+    num_nodes = x.size()[0]
+    mask = torch.ones(num_nodes, num_feats)
+    mask[:][torch.randperm(num_nodes)[:int(num_feats * wandb.config.percent_corrupted)]] = 0
+    mask = mask.bool().to(device)
 
-        x = torch.where(mask.bool(), x, torch.zeros_like(x))
-        return x
+    x = torch.where(mask.bool(), x, torch.zeros_like(x))
+    return x
 
-    def dropout_corruption(x, p=0.9):
-        mask = torch.empty_like(x).bernoulli_(p)
-        x = torch.where(mask.bool(), x, torch.zeros_like(x))
-        return x
 
-    def summary(z, *args, **kwargs):
-        return torch.sigmoid(z.mean(dim=0))
+def dropout_corruption(x, p=0.9):
+    mask = torch.empty_like(x).bernoulli_(p)
+    x = torch.where(mask.bool(), x, torch.zeros_like(x))
+    return x
 
-    total_loss = 0
 
-    unsupervised_model = DeepGraphInfomax(hidden_channels=num_classes, encoder=model_mlpinit, summary=summary,
+def summary(z, *args, **kwargs):
+    return torch.sigmoid(z.mean(dim=0))
+
+
+unsupervised_model = DeepGraphInfomax(hidden_channels=num_classes, encoder=model_mlpinit, summary=summary,
                                           corruption=dropout_corruption)
-    unsupervised_model.to(device)
+unsupervised_model.to(device)
+def train_mlpinit():
+    total_loss = 0
     unsupervised_model.train()
     for x, _ in tqdm(train_mlpinit_loader):
         x = x.to(device)
 
         optimizer_model_mlpinit.zero_grad()
-        pos_z, neg_z, summary = unsupervised_model(x)
+        pos_z, neg_z, summary_value = unsupervised_model(x)
         loss = unsupervised_model.loss(pos_z, neg_z, summary)
         loss.backward()
         optimizer_model_mlpinit.step()
