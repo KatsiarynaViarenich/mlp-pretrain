@@ -69,7 +69,7 @@ wandb.init(
     dir="./wandb",
     config={
         "dataset_name": "ogbn-arxiv",
-        "batch_size": 1024,
+        "batch_size": 32,
         "num_layers": 4,
         "hidden_channels": 1024,
         "percent_corrupted": 0.25,
@@ -234,6 +234,7 @@ def summary(z, *args, **kwargs):
 unsupervised_model = DeepGraphInfomax(hidden_channels=num_classes, encoder=model_mlpinit, summary=summary,
                                           corruption=dropout_corruption)
 unsupervised_model.to(device)
+
 def train_mlpinit():
     total_loss = 0
     unsupervised_model.train()
