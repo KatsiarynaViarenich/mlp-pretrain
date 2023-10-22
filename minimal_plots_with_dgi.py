@@ -1,3 +1,9 @@
+# ----------------------------------------------------------------------------
+# The implementation is based on code provided by Snap Inc. under their own license:
+# Copyright Snap Inc. 2023. All rights reserved.
+# See Snap Inc.'s license for more details.
+# ----------------------------------------------------------------------------
+
 import os.path as osp
 from ogb.nodeproppred import Evaluator, PygNodePropPredDataset
 import torch
